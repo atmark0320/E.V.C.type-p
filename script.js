@@ -5,7 +5,6 @@ const correctPassword = "Ptool"; // パスワード設定
 
 // ページ読み込み時の処理
 document.addEventListener("DOMContentLoaded", () => {
-    // index.htmlの場合のみパスワードモーダルを表示
     const passwordModal = document.getElementById("passwordModal");
     if (passwordModal) {
         document.getElementById("passwordOverlay").style.display = "block";
@@ -19,13 +18,12 @@ function checkPassword() {
     const inputPasswordElement = document.getElementById("passwordInput");
     const attemptMessageElement = document.getElementById("attemptMessage");
 
-    // index.html以外では実行しない
     if (!inputPasswordElement || !attemptMessageElement) return;
 
     const inputPassword = inputPasswordElement.value;
 
     if (inputPassword === correctPassword) {
-        console.log("パスワード正解、リダイレクトを試みます"); // デバッグ用
+        console.log("パスワード正解、リダイレクトを試みます");
         try {
             window.location.href = "main.html";
         } catch (e) {
@@ -35,7 +33,7 @@ function checkPassword() {
     } else {
         passwordAttempts++;
         if (passwordAttempts >= 3) {
-            console.log("試行回数超過、Googleにリダイレクト"); // デバッグ用
+            console.log("試行回数超過、Googleにリダイレクト");
             window.location.href = "https://www.google.com";
         } else {
             attemptMessageElement.textContent = `パスワードが間違っています。残り${3 - passwordAttempts}回`;
@@ -55,7 +53,19 @@ if (passwordInput) {
     });
 }
 
-// 以下は既存の関数（main.html用、変更なし）
+// マニュアルモーダルを表示
+function showManualModal() {
+    document.getElementById('manualModal').style.display = 'block';
+    document.getElementById('manualOverlay').style.display = 'block';
+}
+
+// マニュアルモーダルを閉じる
+function closeManualModal() {
+    document.getElementById('manualModal').style.display = 'none';
+    document.getElementById('manualOverlay').style.display = 'none';
+}
+
+// 以下は既存の関数（仮に空でも記載）
 function generateCarInputs() { /* 既存の内容 */ }
 function updateProbabilityInputs() { /* 既存の内容 */ }
 function updateSums() { /* 既存の内容 */ }
@@ -67,5 +77,3 @@ function resetForm() { /* 既存の内容 */ }
 function getBetTypeName(type) { /* 既存の内容 */ }
 function showErrorModal(message) { /* 既存の内容 */ }
 function closeModal() { /* 既存の内容 */ }
-function showManualModal() { /* 既存の内容 */ }
-function closeManualModal() { /* 既存の内容 */ }

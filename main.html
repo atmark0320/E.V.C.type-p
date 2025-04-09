@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E.V.C.type:p</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- メインコンテンツ -->
+    <div id="mainContent">
+        <h1>E.V.C.type:p <span class="manual-link" onclick="showManualModal()">マニュアル</span></h1>
+        
+        <!-- 出走数と着順候補選択エリア -->
+        <div class="container">
+            <h2>レース設定</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>出走数</th>
+                        <th>1着候補</th>
+                        <th>2着候補</th>
+                        <th>目標回収率(%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><select id="carCount" onchange="generateCarInputs()">
+                            <option value="">選択してください</option>
+                            <option value="5">５</option>
+                            <option value="6">６</option>
+                            <option value="7">７</option>
+                            <option value="8">８</option>
+                            <option value="9">９</option>
+                        </select></td>
+                        <td><select id="firstSelect" onchange="updateProbabilityInputs()"></select></td>
+                        <td><select id="secondSelect" onchange="updateProbabilityInputs()"></select></td>
+                        <td><input type="number" id="targetRecovery" min="1" max="1000" step="1" value="100"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 確率入力エリア -->
+        <div class="container">
+            <h2>確率入力</h2>
+            <div class="probability-table-wrapper">
+                <div id="probabilityInputs"></div>
+            </div>
+        </div>
+
+        <!-- ボタンエリア -->
+        <div class="container">
+            <div class="button-container">
+                <button onclick="calculateOdds()" disabled id="calcButton">計算する</button>
+                <button onclick="saveSelectedBets()" disabled id="saveButton">選択を保存</button>
+                <button onclick="resetForm()" id="resetButton">リセット</button>
+            </div>
+        </div>
+
+        <!-- 結果表示エリア -->
+        <div id="results" class="container"></div>
+
+        <!-- 保存された買い目表示エリア -->
+        <div class="container">
+            <h2>保存された買い目</h2>
+            <div id="savedBets" class="saved-bets"></div>
+        </div>
+
+        <!-- エラーモーダル -->
+        <div id="errorModal">
+            <p id="errorMessage" class="error"></p>
+            <button onclick="closeModal()">閉じる</button>
+        </div>
+
+        <!-- マニュアルオーバーレイ -->
+        <div id="manualOverlay" onclick="closeManualModal()"></div>
+
+        <!-- マニュアルモーダル -->
+        <div id="manualModal">
+        <h2>E.V.C.type:p 操作マニュアル</h2>
+        <h3>概要</h3>
+        <p>「E.V.C.type:p」は、競輪の二連単および三連単の予想オッズを計算するためのツールです。出走数、1着・2着候補、各枠番の着順確率を入力することで、目標回収率に基づいた必要オッズを計算し、買い目を保存できます。</p>
+        
+        <h3>基本操作</h3>
+        <h4>1. レース設定の入力</h4>
+        <ol>
+            <li><strong>出走数の選択</strong><br>「出走数」ドロップダウンから「５」「６」「７」「８」「９」のいずれかを選択します。選択後、1着候補と2着候補の選択肢が更新されます。</li>
+            <li><strong>1着候補の選択</strong><br>「1着候補」ドロップダウンから予想する1着の枠番（例: 1番）を選択します。選択すると、確率入力欄が表示されます。</li>
+            <li><strong>2着候補の選択（任意）</strong><br>「2着候補」ドロップダウンから予想する2着の枠番（例: 2番）を選択します。1着と同じ枠番は選択できません。未選択のままでも計算可能です（この場合、二連単のみ計算）。</li>
+            <li><strong>目標回収率の入力</strong><br>「目標回収率(%)」に整数値を入力します（デフォルト: 100）。範囲は1～1000で、小数点以下の入力はできません（例: 100, 95, 105）。</li>
+        </ol>
+
+        <h4>2. 確率入力</h4>
+        <ol>
+            <li><strong>確率表の確認</strong><br>1着候補を選択すると、「確率入力」欄に表が表示されます。枠番ごとに「1着率(%)」「2着率(%)」「3着率(%)」の欄があります。</li>
+            <li><strong>確率の入力</strong><br>各枠番の1着率、2着率、3着率を0～100の範囲で整数値を入力します。1着候補の枠番は2着率・3着率が無効（グレーアウト）。2着候補の枠番は3着率が無効。各列の合計は100%になるように調整してください（合計が100を超えるとエラー表示）。</li>
+            <li><strong>均等入力ボタンの使用</strong><br>「1着均等入力」「2着均等入力」「3着均等入力」ボタンを押すと、未入力の欄に残りの確率を均等に割り振ります。例: 1着率合計が70の場合、残り30を未入力の枠番で均等に分けます（整数で割り振り）。</li>
+        </ol>
+
+        <h4>3. 計算と結果確認</h4>
+        <ol>
+            <li><strong>計算の実行</strong><br>必要な項目を入力後、「計算する」ボタンを押します。未入力項目がある場合や確率合計が100%でない場合、エラーモーダルが表示されます。</li>
+            <li><strong>結果の表示</strong><br><strong>二連単</strong>: 1着候補が選択されている場合、1着固定の組み合わせ（例: 「1-2」「1-3」）が表示されます。<br><strong>三連単</strong>: 1着と2着候補が選択されている場合、1着・2着固定の組み合わせ（例: 「1-2-3」「1-2-4」）が表示されます。<br>各出目には「成立確率」（小数点第1位まで、例: 33.3%）と「必要オッズ」が表示されます。</li>
+        </ol>
+
+        <h4>4. 買い目の保存</h4>
+        <ol>
+            <li><strong>買い目の選択</strong><br>計算結果の表で、保存したい出目のチェックボックスをオンにします。</li>
+            <li><strong>保存の実行</strong><br>「選択を保存」ボタンを押すと、選択した買い目が「保存された買い目」欄に追加されます。保存後、計算結果はクリアされ、出走数と目標回収率の変更が無効化されます。</li>
+            <li><strong>保存内容の確認</strong><br>「保存された買い目」に買い目数、合成オッズ、詳細（種類、出目、確率（小数点第1位まで）、オッズ）が表示されます。</li>
+        </ol>
+
+        <h4>5. リセット</h4>
+        <p>「リセット」ボタンを押すと、すべての入力と保存データが初期化されます。出走数、1着・2着候補、確率、目標回収率、計算結果、保存された買い目がクリアされます。</p>
+
+        <h3>注意事項</h3>
+        <ul>
+            <li><strong>確率の合計</strong>: 1着率、2着率、3着率の各合計が100%でない場合、エラーが表示されます。調整してください。</li>
+            <li><strong>入力値の範囲</strong>: 確率は0～100、目標回収率は1～1000の範囲で、整数のみ入力してください。</li>
+            <li><strong>モバイル対応</strong>: スマートフォンでも操作可能ですが、表が見づらい場合は横にしてください。</li>
+        </ul>
+
+        <h3>操作例</h3>
+        <h4>二連単のみ計算する場合</h4>
+        <ol>
+            <li>出走数: 9</li>
+            <li>1着候補: 1番</li>
+            <li>確率入力:<br>- 1着率: 1番=30, 2～9番=10（合計100）<br>- 2着率: 2～9番=12または13（合計100）</li>
+            <li>目標回収率: 100</li>
+            <li>「計算する」を押す</li>
+            <li>結果: 「1-2」「1-3」などが表示（例: 成立確率 3.8%）</li>
+        </ol>
+
+        <h4>二連単と三連単を計算する場合</h4>
+        <ol>
+            <li>出走数: 9</li>
+            <li>1着候補: 1番、2着候補: 2番</li>
+            <li>確率入力:<br>- 1着率: 1番=30, 2～9番=10（合計100）<br>- 2着率: 2番=30, 3～9番=10（合計100）<br>- 3着率: 3～9番=14または15（合計100）</li>
+            <li>目標回収率: 95</li>
+            <li>「計算する」を押す</li>
+            <li>結果:<br>- 二連単: 「1-2」「1-3」など（例: 成立確率 9.0%）<br>- 三連単: 「1-2-3」「1-2-4」など（例: 成立確率 1.3%）</li>
+        </ol>
+
+        <h3>トラブルシューティング</h3>
+        <ul>
+            <li><strong>計算ボタンが押せない</strong>: 出走数と1着候補が選択されているか確認してください。</li>
+            <li><strong>エラーモーダルが表示される</strong>: 確率の合計や未入力項目を確認し、修正してください。</li>
+            <li><strong>三連単が表示されない</strong>: 2着候補が選択されているか確認してください。</li>
+            <li><strong>小数点が入力できない</strong>: 目標回収率は整数のみ入力可能です（仕様）。</li>
+        </ul>
+            <button onclick="closeManualModal()">閉じる</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

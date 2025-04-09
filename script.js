@@ -20,7 +20,7 @@ function checkPassword() {
 
     if (inputPassword === correctPassword) {
         // パスワードが正しい場合、main.htmlに遷移
-        window.location.href = "main.html";
+        window.location.href = "https://atmark0320.github.io/E.V.C.type-p/main.html";
     } else {
         passwordAttempts++;
         if (passwordAttempts >= 3) {

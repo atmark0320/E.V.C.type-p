@@ -5,6 +5,15 @@ const correctPassword = "Ptool"; // パスワード設定
 
 // ページ読み込み時の処理
 document.addEventListener("DOMContentLoaded", () => {
+    const manualLink = document.querySelector(".manual-link");
+    if (manualLink) {
+        manualLink.addEventListener("click", showManualModal);
+        manualLink.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            showManualModal();
+        });
+    }
+
     const passwordModal = document.getElementById("passwordModal");
     if (passwordModal) {
         document.getElementById("passwordOverlay").style.display = "block";
@@ -65,15 +74,15 @@ function closeManualModal() {
     document.getElementById('manualOverlay').style.display = 'none';
 }
 
-// 以下は既存の関数（仮に空でも記載）
-function generateCarInputs() { /* 既存の内容 */ }
-function updateProbabilityInputs() { /* 既存の内容 */ }
-function updateSums() { /* 既存の内容 */ }
-function fillRemaining(type) { /* 既存の内容 */ }
-function calculateOdds() { /* 既存の内容 */ }
-function saveSelectedBets() { /* 既存の内容 */ }
-function updateSavedBetsDisplay(combinedOdds) { /* 既存の内容 */ }
-function resetForm() { /* 既存の内容 */ }
-function getBetTypeName(type) { /* 既存の内容 */ }
-function showErrorModal(message) { /* 既存の内容 */ }
-function closeModal() { /* 既存の内容 */ }
+// 未実装関数の仮実装
+function generateCarInputs() { console.log("generateCarInputs called"); }
+function updateProbabilityInputs() { console.log("updateProbabilityInputs called"); }
+function updateSums() { console.log("updateSums called"); }
+function fillRemaining(type) { console.log("fillRemaining called with:", type); }
+function calculateOdds() { console.log("calculateOdds called"); }
+function saveSelectedBets() { console.log("saveSelectedBets called"); }
+function updateSavedBetsDisplay(combinedOdds) { console.log("updateSavedBetsDisplay called with:", combinedOdds); }
+function resetForm() { console.log("resetForm called"); }
+function getBetTypeName(type) { return type; }
+function showErrorModal(message) { console.log("Error:", message); }
+function closeModal() { console.log("closeModal called"); }

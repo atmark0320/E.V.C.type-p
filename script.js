@@ -1,19 +1,21 @@
 let savedBets = [];
 let probabilities = { win: {}, place: {}, show: {} };
 let passwordAttempts = 0;
-const correctPassword = "Ptool"; // パスワード設定
+const correctPassword = "Ptool";
 
 // ページ読み込み時の処理
 document.addEventListener("DOMContentLoaded", () => {
+    // マニュアルリンクにイベントリスナーを設定
     const manualLink = document.querySelector(".manual-link");
     if (manualLink) {
         manualLink.addEventListener("click", showManualModal);
         manualLink.addEventListener("touchstart", (e) => {
-            e.preventDefault();
+            e.preventDefault(); // スマホでのダブルタップズーム防止
             showManualModal();
         });
     }
 
+    // パスワードモーダル処理
     const passwordModal = document.getElementById("passwordModal");
     if (passwordModal) {
         document.getElementById("passwordOverlay").style.display = "block";
@@ -64,14 +66,24 @@ if (passwordInput) {
 
 // マニュアルモーダルを表示
 function showManualModal() {
-    document.getElementById('manualModal').style.display = 'block';
-    document.getElementById('manualOverlay').style.display = 'block';
+    const modal = document.getElementById('manualModal');
+    const overlay = document.getElementById('manualOverlay');
+    if (modal && overlay) {
+        modal.style.display = 'block';
+        overlay.style.display = 'block';
+    } else {
+        console.error("manualModalまたはmanualOverlayが見つかりません");
+    }
 }
 
 // マニュアルモーダルを閉じる
 function closeManualModal() {
-    document.getElementById('manualModal').style.display = 'none';
-    document.getElementById('manualOverlay').style.display = 'none';
+    const modal = document.getElementById('manualModal');
+    const overlay = document.getElementById('manualOverlay');
+    if (modal && overlay) {
+        modal.style.display = 'none';
+        overlay.style.display = 'none';
+    }
 }
 
 // 未実装関数の仮実装

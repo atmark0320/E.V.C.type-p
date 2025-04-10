@@ -24,7 +24,16 @@ button { margin-top: 10px; background-color: #0288d1; color: white; border: none
 button:disabled { background-color: #b0bec5; }
 #resetButton { background-color: #d32f2f; }
 #saveButton { background-color: #0288d1; }
-.fill-button { background-color: #ffa726; padding: 4px; font-size: 0.8em; width: 100%; margin: 0; }
+.fill-button { 
+    background-color: #ffa726; 
+    padding: 4px; 
+    font-size: 0.8em; 
+    width: 100%; 
+    margin: 0; 
+    border: none; 
+    cursor: pointer; 
+    max-width: 80px; 
+}
 .error { color: #d32f2f; font-weight: bold; margin-top: 10px; }
 .sum-span { font-size: 0.8em; color: #333; margin-left: 5px; }
 .message { font-size: 0.9em; color: #666; }
@@ -80,35 +89,6 @@ button:disabled { background-color: #b0bec5; }
 .results-container { display: flex; flex-wrap: wrap; gap: 20px; }
 .result-section { flex: 1; min-width: 300px; }
 
-/* パスワードモーダル用スタイル */
-#passwordOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 998;
-}
-#passwordModal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    padding: 20px;
-    border: 1px solid #ccc;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    z-index: 999;
-    text-align: center;
-}
-#passwordInput {
-    padding: 8px;
-    margin: 10px 0;
-    width: 80%;
-    font-size: 1em;
-}
-
 @media (max-width: 600px) {
     th, td { padding: 4px; font-size: 0.8em; }
     .prob-input { width: 40px; }
@@ -116,9 +96,8 @@ button:disabled { background-color: #b0bec5; }
     button { width: 33%; max-width: none; }
     table { max-width: 100%; }
     .sum-span { font-size: 0.7em; }
-    .fill-button { font-size: 0.7em; padding: 3px; }
+    .fill-button { font-size: 0.7em; padding: 3px; max-width: 70px; }
     #errorModal { width: 90%; max-height: 85vh; }
     #manualModal { width: 90%; max-width: 400px; max-height: 65vh; }
     .results-container { flex-direction: column; }
-    #passwordModal { width: 90%; }
 }

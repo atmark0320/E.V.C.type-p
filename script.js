@@ -1,11 +1,10 @@
 let savedBets = [];
 let probabilities = { win: {}, place: {}, show: {} };
 let passwordAttempts = 0;
-const correctPassword = "Ptool"; // パスワード設定
+const correctPassword = "Ptool";
 
 // ページ読み込み時の処理
 document.addEventListener("DOMContentLoaded", () => {
-    // index.htmlの場合のみパスワードモーダルを表示（main.htmlでは不要）
     if (document.getElementById("passwordModal")) {
         document.getElementById("passwordOverlay").style.display = "block";
         document.getElementById("passwordModal").style.display = "block";
@@ -47,12 +46,14 @@ function generateCarInputs() {
     const firstSelect = document.getElementById('firstSelect');
     const secondSelect = document.getElementById('secondSelect');
 
+    console.log("出走数:", count); // デバッグ用
+
     // 選択肢をクリア
     firstSelect.innerHTML = '<option value="">選択してください</option>';
     secondSelect.innerHTML = '<option value="">選択してください</option>';
     document.getElementById('probabilityInputs').innerHTML = '';
     document.getElementById('results').innerHTML = '';
-    savedBets = []; // 保存データもクリア
+    savedBets = [];
     updateSavedBetsDisplay();
 
     if (!count) {
@@ -67,8 +68,14 @@ function generateCarInputs() {
         option.value = i;
         option.text = `${i}番`;
         firstSelect.appendChild(option.cloneNode(true));
-        secondSelect.appendChild(option);
+        secondSelect.appendChild(option.cloneNode(true));
     }
+
+    console.log("1着候補選択肢:", firstSelect.innerHTML); // デバッグ用
+    console.log("2着候補選択肢:", secondSelect.innerHTML); // デバッグ用
+
+    firstSelect.disabled = false; // 明示的に有効化
+    secondSelect.disabled = false; // 明示的に有効化
 
     updateProbabilityInputs();
 }
@@ -79,6 +86,8 @@ function updateProbabilityInputs() {
     const first = document.getElementById('firstSelect').value;
     const second = document.getElementById('secondSelect').value;
     const probabilityInputs = document.getElementById('probabilityInputs');
+
+    console.log("1着:", first, "2着:", second); // デバッグ用
 
     if (!carCount || !first) {
         probabilityInputs.innerHTML = '';
@@ -167,7 +176,6 @@ function calculateOdds() {
     const carCount = parseInt(document.getElementById('carCount').value);
     let resultsHtml = '<h2>計算結果</h2><table><thead><tr><th>種類</th><th>出目</th><th>成立確率(%)</th><th>必要オッズ</th><th>選択</th></tr></thead><tbody>';
 
-    // 二連単の計算
     for (let i = 1; i <= carCount; i++) {
         if (i != first) {
             const prob = (probabilities.win[first] * probabilities.place[i]) / 10000;
@@ -183,7 +191,6 @@ function calculateOdds() {
         }
     }
 
-    // 三連単の計算（2着候補が選択されている場合）
     if (second) {
         for (let i = 1; i <= carCount; i++) {
             if (i != first && i != second) {

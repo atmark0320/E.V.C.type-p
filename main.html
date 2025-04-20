@@ -5,9 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E.V.C.type:p</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        #trackDataModal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 1001;
+            max-height: 80vh;
+            overflow-y: auto;
+            width: 80%;
+            max-width: 800px;
+        }
+        #trackDataOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        #trackDataModal table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #trackDataModal th, #trackDataModal td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        #trackDataModal th {
+            background-color: #f2f2f2;
+        }
+        .track-data-link {
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+            position: absolute;
+            left: 10px;
+            top: 10px;
+        }
+    </style>
+    <script>
+        function showTrackDataModal() {
+            document.getElementById('trackDataModal').style.display = 'block';
+            document.getElementById('trackDataOverlay').style.display = 'block';
+        }
+        function closeTrackDataModal() {
+            document.getElementById('trackDataModal').style.display = 'none';
+            document.getElementById('trackDataOverlay').style.display = 'none';
+        }
+    </script>
 </head>
 <body>
     <h1>E.V.C.type:p <span class="manual-link" onclick="showManualModal()">マニュアル</span></h1>
+    <span class="track-data-link" onclick="showTrackDataModal()">競輪場データ</span>
     
     <!-- 出走数と着順候補選択エリア -->
     <div class="container">
@@ -149,6 +208,68 @@
         </ul>
 
         <button onclick="closeManualModal()">閉じる</button>
+    </div>
+
+    <!-- 競輪場データオーバーレイ -->
+    <div id="trackDataOverlay" onclick="closeTrackDataModal()"></div>
+
+    <!-- 競輪場データモーダル -->
+    <div id="trackDataModal">
+        <h2>全国競輪場データ</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>競輪場名</th>
+                    <th>周長 (m)</th>
+                    <th>みなし直線 (m)</th>
+                    <th>カント (度)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>函館</td><td>400</td><td>51.3</td><td>30°36'51"</td></tr>
+                <tr><td>青森</td><td>400</td><td>58.9</td><td>32°15'07"</td></tr>
+                <tr><td>いわき平</td><td>400</td><td>62.7</td><td>32°54'54"</td></tr>
+                <tr><td>弥彦</td><td>400</td><td>63.1</td><td>32°24'17"</td></tr>
+                <tr><td>前橋</td><td>335</td><td>46.7</td><td>36°00'00"</td></tr>
+                <tr><td>取手</td><td>400</td><td>54.8</td><td>31°30'25"</td></tr>
+                <tr><td>宇都宮</td><td>500</td><td>63.3</td><td>25°47'44"</td></tr>
+                <tr><td>大宮</td><td>500</td><td>66.7</td><td>26°16'40"</td></tr>
+                <tr><td>西武園</td><td>400</td><td>47.6</td><td>29°26'54"</td></tr>
+                <tr><td>京王閣</td><td>400</td><td>51.5</td><td>32°10'34"</td></tr>
+                <tr><td>立川</td><td>400</td><td>58.0</td><td>31°13'06"</td></tr>
+                <tr><td>松戸</td><td>333</td><td>38.2</td><td>29°44'42"</td></tr>
+                <tr><td>川崎</td><td>400</td><td>58.0</td><td>32°10'14"</td></tr>
+                <tr><td>平塚</td><td>400</td><td>54.2</td><td>31°28'37"</td></tr>
+                <tr><td>小田原</td><td>333</td><td>36.1</td><td>35°34'12"</td></tr>
+                <tr><td>伊東温泉</td><td>333</td><td>46.6</td><td>34°41'09"</td></tr>
+                <tr><td>静岡</td><td>400</td><td>56.4</td><td>30°43'22"</td></tr>
+                <tr><td>豊橋</td><td>400</td><td>54.0</td><td>31°30'00"</td></tr>
+                <tr><td>富山</td><td>333</td><td>39.0</td><td>33°00'00"</td></tr>
+                <tr><td>福井</td><td>400</td><td>55.0</td><td>31°45'00"</td></tr>
+                <tr><td>大垣</td><td>400</td><td>54.5</td><td>31°20'00"</td></tr>
+                <tr><td>岐阜</td><td>400</td><td>56.0</td><td>31°40'00"</td></tr>
+                <tr><td>向日町</td><td>333</td><td>38.5</td><td>34°00'00"</td></tr>
+                <tr><td>奈良</td><td>333</td><td>38.0</td><td>34°30'00"</td></tr>
+                <tr><td>四日市</td><td>400</td><td>55.5</td><td>31°25'00"</td></tr>
+                <tr><td>松阪</td><td>400</td><td>54.8</td><td>31°35'00"</td></tr>
+                <tr><td>和歌山</td><td>400</td><td>56.2</td><td>31°50'00"</td></tr>
+                <tr><td>岸和田</td><td>400</td><td>58.5</td><td>31°15'00"</td></tr>
+                <tr><td>玉野</td><td>400</td><td>54.0</td><td>31°30'00"</td></tr>
+                <tr><td>広島</td><td>400</td><td>55.8</td><td>31°40'00"</td></tr>
+                <tr><td>防府</td><td>333</td><td>39.5</td><td>33°30'00"</td></tr>
+                <tr><td>高松</td><td>400</td><td>56.0</td><td>31°45'00"</td></tr>
+                <tr><td>小松島</td><td>400</td><td>54.5</td><td>31°20'00"</td></tr>
+                <tr><td>高知</td><td>500</td><td>52.0</td><td>26°00'00"</td></tr>
+                <tr><td>松山</td><td>400</td><td>55.5</td><td>31°25'00"</td></tr>
+                <tr><td>小倉</td><td>400</td><td>52.8</td><td>31°00'00"</td></tr>
+                <tr><td>久留米</td><td>400</td><td>55.0</td><td>31°30'00"</td></tr>
+                <tr><td>武雄</td><td>400</td><td>54.8</td><td>31°35'00"</td></tr>
+                <tr><td>佐世保</td><td>400</td><td>53.5</td><td>31°10'00"</td></tr>
+                <tr><td>別府</td><td>400</td><td>54.2</td><td>31°28'00"</td></tr>
+                <tr><td>熊本</td><td>500</td><td>60.0</td><td>26°30'00"</td></tr>
+            </tbody>
+        </table>
+        <button onclick="closeTrackDataModal()">閉じる</button>
     </div>
 
     <script src="script.js" defer></script>

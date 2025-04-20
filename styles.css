@@ -1,8 +1,8 @@
 body { font-family: Arial, sans-serif; margin: 10px; background-color: #f9f9f9; }
 .container { margin: 15px 0; }
 h1 { font-size: 1.5em; margin: 0; }
-h2 { font-size: 1.1em; } /* 縮小 */
-h3 { font-size: 1.0em; } /* 縮小 */
+h2 { font-size: 1.1em; }
+h3 { font-size: 1.0em; }
 select, button, input[type="number"] { padding: 8px; font-size: 1em; width: 100%; box-sizing: border-box; }
 .probability-table-wrapper { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; max-width: 400px; }
@@ -70,12 +70,16 @@ button:disabled { background-color: #b0bec5; }
     overflow-y: auto; 
 }
 .fill-button-cell { padding: 2px; }
-.manual-link { 
-    font-size: 0.6em; /* 二段階縮小: 1em → 0.6em */
+.links {
+    text-align: right;
+    margin-bottom: 10px;
+}
+.manual-link, .track-data-link { 
+    font-size: 0.6em;
     color: #0288d1; 
     cursor: pointer; 
     text-decoration: underline; 
-    float: right; 
+    margin-left: 10px;
 }
 .results-container { display: flex; flex-wrap: wrap; gap: 20px; }
 .result-section { flex: 1; min-width: 300px; }
@@ -90,4 +94,5 @@ button:disabled { background-color: #b0bec5; }
     #errorModal { width: 90%; max-height: 85vh; }
     #manualModal { width: 90%; max-width: 400px; max-height: 65vh; }
     .results-container { flex-direction: column; }
+    .links { font-size: 0.8em; }
 }

@@ -44,14 +44,6 @@
         #trackDataModal th {
             background-color: #f2f2f2;
         }
-        .track-data-link {
-            cursor: pointer;
-            color: blue;
-            text-decoration: underline;
-            position: absolute;
-            left: 10px;
-            top: 10px;
-        }
     </style>
     <script>
         function showTrackDataModal() {
@@ -65,8 +57,11 @@
     </script>
 </head>
 <body>
-    <h1>E.V.C.type:p <span class="manual-link" onclick="showManualModal()">マニュアル</span></h1>
-    <span class="track-data-link" onclick="showTrackDataModal()">競輪場データ</span>
+    <div class="links">
+        <span class="manual-link" onclick="showManualModal()">マニュアル</span>
+        <span class="track-data-link" onclick="showTrackDataModal()">競輪場データ</span>
+    </div>
+    <h1>E.V.C.type:p</h1>
     
     <!-- 出走数と着順候補選択エリア -->
     <div class="container">

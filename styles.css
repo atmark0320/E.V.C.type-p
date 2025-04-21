@@ -74,7 +74,7 @@ button:disabled { background-color: #b0bec5; }
     text-align: right;
     margin-bottom: 10px;
 }
-.manual-link, .track-data-link { 
+.modal-link { 
     font-size: 0.6em;
     color: #0288d1; 
     cursor: pointer; 

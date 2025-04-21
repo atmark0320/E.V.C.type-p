@@ -75,7 +75,7 @@ button:disabled { background-color: #b0bec5; }
     margin-bottom: 10px;
 }
 .modal-link { 
-    font-size: 0.6em;
+    font-size: 0.8em; /* 文字サイズを0.6emから0.8emに変更 */
     color: #0288d1; 
     cursor: pointer; 
     text-decoration: underline; 
@@ -94,5 +94,5 @@ button:disabled { background-color: #b0bec5; }
     #errorModal { width: 90%; max-height: 85vh; }
     #manualModal { width: 90%; max-width: 400px; max-height: 65vh; }
     .results-container { flex-direction: column; }
-    .links { font-size: 0.8em; }
+    .links { font-size: 0.9em; } /* モバイル時の文字サイズを0.8emから0.9emに変更 */
 }

@@ -75,11 +75,15 @@ button:disabled { background-color: #b0bec5; }
     margin-bottom: 10px;
 }
 .modal-link { 
-    font-size: 0.8em; /* 文字サイズを0.6emから0.8emに変更 */
+    font-size: 0.7em; /* 文字サイズを0.8emから0.7emに調整 */
     color: #0288d1; 
     cursor: pointer; 
-    text-decoration: underline; 
+    text-decoration: underline; /* リンク形式を明確に */
     margin-left: 10px;
+}
+.modal-link:hover {
+    color: #01579b; /* ホバー時に濃い青に変化 */
+    text-decoration: underline; /* ホバー時も下線を保持 */
 }
 .results-container { display: flex; flex-wrap: wrap; gap: 20px; }
 .result-section { flex: 1; min-width: 300px; }
@@ -94,5 +98,5 @@ button:disabled { background-color: #b0bec5; }
     #errorModal { width: 90%; max-height: 85vh; }
     #manualModal { width: 90%; max-width: 400px; max-height: 65vh; }
     .results-container { flex-direction: column; }
-    .links { font-size: 0.9em; } /* モバイル時の文字サイズを0.8emから0.9emに変更 */
+    .links { font-size: 0.8em; } /* モバイル時の文字サイズを0.9emから0.8emに調整 */
 }

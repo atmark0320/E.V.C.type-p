@@ -1,6 +1,5 @@
 // このスクリプトは、競輪のオッズ計算ツールを制御します。
-// 買い目データはブラウザのメモリに一時的に保存され、
-// ブラウザを閉じたりページを更新したりすると失われます。
+// 買い目データはブラウザのメモリに一時的に保存され、ブラウザを閉じたりページを更新したりすると失われます。
 
 let savedBets = []; // 保存された買い目を保持する配列
 let probabilities = { win: {}, place: {}, show: {} }; // 各枠番の確率を保持
@@ -22,13 +21,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     firstSelect.addEventListener('change', updateProbabilityInputs);
     secondSelect.addEventListener('change', updateProbabilityInputs);
 
-    // 保存された買い目表示を初期化（データは永続化されません）
+    // savedBetsは初期状態の空配列（localStorageからのロードは行いません）
     updateSavedBetsDisplay();
 
-    // 出走数と目標回収率の入力は常に有効
-    document.getElementById('carCount').disabled = false;
-    document.getElementById('targetRecovery').disabled = false;
+    // 買い目がある場合は出走数と目標回収率を無効化
+    if (savedBets.length > 0) {
+        document.getElementById('carCount').disabled = true;
+        document.getElementById('targetRecovery').disabled = true;
+    } else {
+        document.getElementById('carCount').disabled = false;
+        document.getElementById('targetRecovery').disabled = false;
+    }
 });
+
+/**
+ * localStorageから保存された買い目をロードします。
+ * localStorageを使用しないため、この関数はsavedBetsを初期化するのみです。
+ */
+function loadSavedBetsFromLocalStorage() {
+    // localStorageからのロードは行いません。
+    savedBets = [];
+    console.log("localStorageを使用しないため、買い目のロードは行われません。");
+}
 
 /**
  * 出走数に基づいて入力フィールドを生成します。
@@ -198,7 +212,7 @@ function updateSums() {
 
     // 合計が100%を超えた場合、エラーモーダルを表示
     if (winSum >= 100 + tolerance || placeSum >= 100 + tolerance || showSum >= 100 + tolerance) {
-        showErrorModal('合計確率が100%を超えています。調整してください。');
+        showMessageModal('合計確率が100%を超えています。調整してください。', true);
     } else {
         closeModal(); // エラーが解消されたらモーダルを閉じる
     }
@@ -286,7 +300,7 @@ function calculateOdds() {
     const resultsDiv = document.getElementById('results');
     // 未入力項目がある場合、エラーモーダルを表示
     if (hasEmptyInput) {
-        showErrorModal('未入力の項目があります。すべての有効な欄に入力してください。');
+        showMessageModal('未入力の項目があります。すべての有効な欄に入力してください。', true);
         document.getElementById('saveButton').disabled = true;
         return;
     }
@@ -294,7 +308,7 @@ function calculateOdds() {
     const tolerance = 0.01;
     // 確率の合計が100%でない場合、エラーモーダルを表示
     if (Math.abs(winSum - 100) > tolerance || Math.abs(placeSum - 100) > tolerance || Math.abs(showSum - 100) > tolerance) {
-        showErrorModal(`確率の合計が100%ではありません。\n1着率合計: ${winSum}%, 2着率合計: ${placeSum}%, 3着率合計: ${showSum}%`);
+        showMessageModal(`確率の合計が100%ではありません。\n1着率合計: ${winSum}%, 2着率合計: ${placeSum}%, 3着率合計: ${showSum}%`, true);
         document.getElementById('saveButton').disabled = true;
         return;
     }
@@ -366,17 +380,13 @@ function calculateOdds() {
 async function saveSelectedBets() {
     const checkboxes = document.querySelectorAll('.bet-checkbox:checked');
     if (checkboxes.length === 0) {
-        showErrorModal('保存する買い目を選択してください。');
+        showMessageModal('保存する買い目を選択してください。', true);
         return;
     }
     
-    const betName = prompt("この買い目セットに名前を付けてください:");
-    if (betName === null || betName.trim() === "") {
-        showErrorModal("買い目には名前が必要です。");
-        return;
-    }
+    // 名前を自動生成 (例: "買い目セット") - タイムスタンプを削除
+    const name = `買い目セット`; 
 
-    // 買い目を一時的に保存 (ページ更新で消えます)
     const newBets = [];
     checkboxes.forEach(checkbox => {
         const bet = {
@@ -389,20 +399,21 @@ async function saveSelectedBets() {
     });
 
     savedBets.push({
-        id: Date.now().toString(), // 一時的なID
-        name: betName,
+        id: Date.now().toString(), // 一意なIDを生成
+        name: name, // 自動生成された名前を使用
         bets: newBets,
-        timestamp: new Date()
+        timestamp: new Date().toISOString() // ISO形式で日付を保存
     });
 
     updateSavedBetsDisplay(); // 表示を更新
-    showErrorModal("買い目はブラウザを閉じると消えてしまいます。");
+    // showMessageModal("買い目が保存されました。（このデータはページを閉じると消えます）", false); // ポップアップを削除
 
     document.getElementById('results').innerHTML = '';
     document.getElementById('saveButton').disabled = true;
 
-    document.getElementById('carCount').disabled = false; // 保存しても無効化しない
-    document.getElementById('targetRecovery').disabled = false; // 保存しても無効化しない
+    // 買い目を保存したら出走数と目標回収率を無効化
+    document.getElementById('carCount').disabled = true;
+    document.getElementById('targetRecovery').disabled = true;
 }
 
 /**
@@ -410,15 +421,36 @@ async function saveSelectedBets() {
  */
 function updateSavedBetsDisplay() {
     const savedBetsDiv = document.getElementById('savedBets');
-    const deleteButton = document.getElementById('deleteSavedBetsButton');
+    const deleteIndividualBetsButton = document.getElementById('deleteIndividualBetsButton');
 
     if (savedBets.length === 0) {
         savedBetsDiv.innerHTML = '<p>保存された買い目はまだありません。</p>';
-        deleteButton.style.display = 'none';
+        deleteIndividualBetsButton.style.display = 'none'; // ボタンを非表示にする
         return;
     }
 
     let displayHtml = '';
+    
+    // 全体の合成オッズを計算
+    let overallTotalOddsSum = 0;
+    let overallTotalBetsCount = 0;
+    savedBets.forEach(savedSet => {
+        savedSet.bets.forEach(bet => {
+            overallTotalOddsSum += 1 / bet.odds;
+            overallTotalBetsCount++;
+        });
+    });
+    const overallCombinedOdds = overallTotalOddsSum > 0 ? Math.round((1 / overallTotalOddsSum) * 100) / 100 : 1000;
+
+    // 全体の合成オッズを表示
+    if (savedBets.length > 0) { // 少なくとも1つのセットがあれば表示
+        displayHtml += `
+            <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; background-color: #e0f7fa; border-radius: 5px;">
+                <strong>全体の点数: ${overallTotalBetsCount}点, 全体の合成オッズ: ${overallCombinedOdds}倍</strong>
+            </div>
+        `;
+    }
+
     savedBets.forEach((savedSet, setIndex) => {
         let totalOddsSum = 0;
         savedSet.bets.forEach(bet => {
@@ -426,20 +458,21 @@ function updateSavedBetsDisplay() {
         });
         const combinedOdds = totalOddsSum > 0 ? Math.round((1 / totalOddsSum) * 100) / 100 : 1000;
 
+        // 買い目セットのヘッダーには削除ボタンをつけない
         displayHtml += `
             <div class="saved-bet-set" style="border: 1px solid #eee; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
                 <h3>
-                    <input type="checkbox" class="saved-bet-checkbox" data-doc-id="${savedSet.id}" id="checkbox-${savedSet.id}">
-                    <label for="checkbox-${savedSet.id}">${savedSet.name} (買い目数: ${savedSet.bets.length}, 合成オッズ: ${combinedOdds}倍)</label>
+                    点数: ${savedSet.bets.length}, 合成オッズ: ${combinedOdds}倍
                 </h3>
                 <div style="overflow-x: auto;">
                     <table>
                         <thead>
-                            <tr><th>種類</th><th>出目</th><th>成立確率</th><th>必要オッズ</th></tr>
+                            <tr><th>選択</th><th>種類</th><th>出目</th><th>成立確率</th><th>必要オッズ</th></tr>
                         </thead>
                         <tbody>
-                            ${savedSet.bets.map(bet => `
+                            ${savedSet.bets.map((bet, betIndex) => `
                                 <tr>
+                                    <td><input type="checkbox" class="individual-bet-checkbox" data-set-id="${savedSet.id}" data-bet-index="${betIndex}"></td>
                                     <td>${getBetTypeName(bet.type)}</td>
                                     <td>${bet.pattern}</td>
                                     <td>${(bet.prob * 100).toFixed(1)}%</td>
@@ -454,34 +487,60 @@ function updateSavedBetsDisplay() {
     });
     savedBetsDiv.innerHTML = displayHtml;
 
-    deleteButton.style.display = 'block';
+    // 買い目がある場合は個別削除ボタンを表示
+    deleteIndividualBetsButton.style.display = 'block';
 }
 
 /**
- * 選択された買い目を一時的なリストから削除します。
+ * 選択された個別の買い目をメモリから削除します。
  */
-async function deleteSelectedBets() {
-    const checkboxes = document.querySelectorAll('.saved-bet-checkbox:checked');
+async function deleteSelectedIndividualBets() {
+    const checkboxes = document.querySelectorAll('.individual-bet-checkbox:checked');
     if (checkboxes.length === 0) {
-        showErrorModal('削除する買い目を選択してください。');
+        showMessageModal('削除する買い目を選択してください。', true);
         return;
     }
 
-    // 選択された買い目のインデックスを降順にソートして取得
-    const indicesToDelete = Array.from(checkboxes).map(cb => {
-        const docId = cb.dataset.docId;
-        return savedBets.findIndex(bet => bet.id === docId);
-    }).sort((a, b) => b - a);
-
-    // 選択された買い目を削除
-    indicesToDelete.forEach(index => {
-        if (index > -1) {
-            savedBets.splice(index, 1);
+    // 削除対象の買い目をセットIDごとにグループ化し、インデックスを降順にソート
+    const betsToDeleteBySetId = new Map(); // Map<setId, Array<betIndex>>
+    checkboxes.forEach(checkbox => {
+        const setId = checkbox.dataset.setId;
+        const betIndex = parseInt(checkbox.dataset.betIndex);
+        if (!betsToDeleteBySetId.has(setId)) {
+            betsToDeleteBySetId.set(setId, []);
         }
+        betsToDeleteBySetId.get(setId).push(betIndex);
     });
 
+    let deletedCount = 0;
+
+    // savedBetsを逆順に処理して、セット削除によるインデックスずれを防ぐ
+    for (let i = savedBets.length - 1; i >= 0; i--) {
+        const currentSet = savedBets[i];
+        if (betsToDeleteBySetId.has(currentSet.id)) {
+            const indicesToDelete = betsToDeleteBySetId.get(currentSet.id).sort((a, b) => b - a); // 降順ソート
+
+            indicesToDelete.forEach(idx => {
+                if (idx >= 0 && idx < currentSet.bets.length) {
+                    currentSet.bets.splice(idx, 1);
+                    deletedCount++;
+                }
+            });
+
+            // 買い目セットが空になった場合、そのセット自体を削除
+            if (currentSet.bets.length === 0) {
+                savedBets.splice(i, 1);
+            }
+        }
+    }
+
+    if (deletedCount > 0) {
+        // showMessageModal("選択された買い目を削除しました。", false); // ポップアップを削除
+    } else {
+        // showMessageModal("削除する買い目が見つかりませんでした。", true); // ポップアップを削除
+    }
+
     updateSavedBetsDisplay(); // 表示を更新
-    showErrorModal("買い目はブラウザを閉じると消えてしまいます。");
 
     // 保存された買い目がなくなった場合、出走数と目標回収率の入力を再度有効にする
     if (savedBets.length === 0) {
@@ -489,6 +548,7 @@ async function deleteSelectedBets() {
         document.getElementById('targetRecovery').disabled = false;
     }
 }
+
 
 /**
  * フォームの全ての入力と保存された買い目をリセットします。
@@ -510,7 +570,7 @@ function resetForm() {
     probabilities = { win: {}, place: {}, show: {} };
     updateSavedBetsDisplay();
     closeModal();
-    document.getElementById('deleteSavedBetsButton').style.display = 'none'; // リセット時に削除ボタンを非表示
+    document.getElementById('deleteIndividualBetsButton').style.display = 'none'; // リセット時にボタンを非表示
 
     // 1着候補と2着候補のドロップダウンを無効化
     firstSelect.disabled = true;
@@ -528,16 +588,21 @@ function getBetTypeName(type) {
 }
 
 /**
- * エラーモーダルを表示します。
- * @param {string} message - 表示するエラーメッセージ
+ * メッセージモーダルを表示します。
+ * @param {string} message - 表示するメッセージ
+ * @param {boolean} isError - エラーメッセージかどうか (true: エラー, false: 情報)
  */
-function showErrorModal(message) {
-    document.getElementById('errorMessage').textContent = message;
-    document.getElementById('errorModal').style.display = 'block';
+function showMessageModal(message, isError = true) {
+    const modal = document.getElementById('errorModal'); // errorModalを再利用
+    const messageElement = document.getElementById('errorMessage');
+    messageElement.textContent = message;
+    messageElement.classList.remove('error-message', 'info-message'); // 既存クラスをリセット
+    messageElement.classList.add(isError ? 'error-message' : 'info-info'); // 新しいクラスを追加
+    modal.style.display = 'block';
 }
 
 /**
- * エラーモーダルを閉じます。
+ * エラーモーダル（メッセージモーダル）を閉じます。
  */
 function closeModal() {
     document.getElementById('errorModal').style.display = 'none';

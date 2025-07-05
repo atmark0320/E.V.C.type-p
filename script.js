@@ -1,12 +1,12 @@
-// Firebase SDKのインポート
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, query, onSnapshot, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Firebase SDKのインポートはHTMLで行うため、ここでは削除します。
+// import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+// import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// import { getFirestore, collection, query, onSnapshot, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 let savedBets = [];
 let probabilities = { win: {}, place: {}, show: {} };
 
-// Firebase関連のグローバル変数
+// Firebase関連のグローバル変数 (HTMLで読み込まれるため、ここでは宣言のみ)
 let app;
 let db;
 let auth;
@@ -14,7 +14,23 @@ let userId = null; // 現在のユーザーID
 
 // Canvas環境から提供されるFirebase設定とアプリID
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+let firebaseConfig = {};
+
+// ★修正点: __firebase_config が提供されているか、かつそれがダミー設定でないかを厳密にチェック
+let isRealFirebaseConfig = false;
+if (typeof __firebase_config !== 'undefined') {
+    firebaseConfig = JSON.parse(__firebase_config);
+    // projectIdが「dummy-project」でないことを確認して、本物のFirebase設定とみなす
+    if (firebaseConfig.projectId && firebaseConfig.projectId !== "dummy-project") {
+        isRealFirebaseConfig = true;
+        console.log("Canvas-provided __firebase_config is detected and appears to be real.");
+    } else {
+        console.warn("Canvas-provided __firebase_config is present but appears to be a dummy or incomplete config. Firebase persistence will be disabled.");
+    }
+} else {
+    console.warn("Canvas-provided __firebase_config is undefined. Firebase persistence will be disabled.");
+}
+
 
 // DOMContentLoaded イベントリスナー: HTMLが完全に読み込まれてから実行
 document.addEventListener('DOMContentLoaded', async () => {
@@ -23,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const firstSelect = document.getElementById('firstSelect');
     const secondSelect = document.getElementById('secondSelect');
 
-    // ★修正点: 初期状態で1着候補と2着候補を明示的に無効化
+    // 初期状態で1着候補と2着候補を明示的に無効化
     firstSelect.disabled = true;
     secondSelect.disabled = true;
     console.log('DOMContentLoaded: firstSelect.disabled =', firstSelect.disabled, 'secondSelect.disabled =', secondSelect.disabled);
@@ -34,36 +50,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     firstSelect.addEventListener('change', updateProbabilityInputs);
     secondSelect.addEventListener('change', updateProbabilityInputs);
 
-    // Firebaseの初期化と認証
-    if (Object.keys(firebaseConfig).length > 0) {
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
+    // ★修正点: 本物のFirebase設定がある場合のみFirebaseを初期化
+    if (isRealFirebaseConfig && typeof firebase !== 'undefined' && typeof firebase.initializeApp === 'function') {
+        try {
+            app = firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore(); // getFirestoreの代わりにfirebase.firestore()を使用
+            auth = firebase.auth();   // getAuthの代わりにfirebase.auth()を使用
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userId = user.uid;
-                console.log("Firebase authenticated. User ID:", userId);
-                loadSavedBetsFromFirestore(); // 認証後に買い目をロード
-            } else {
-                console.log("Firebase not authenticated. Signing in anonymously...");
-                try {
-                    // __initial_auth_token が定義されていない場合は匿名認証を使用
-                    if (typeof __initial_auth_token !== 'undefined') {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
+            // 認証状態の変更を監視
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    console.log("Firebase authenticated. User ID:", userId);
+                    loadSavedBetsFromFirestore(); // 認証後に買い目をロード
+                } else {
+                    console.log("Firebase not authenticated. Signing in anonymously...");
+                    try {
+                        // __initial_auth_token が定義されていない場合は匿名認証を使用
+                        if (typeof __initial_auth_token !== 'undefined') {
+                            await auth.signInWithCustomToken(__initial_auth_token);
+                        } else {
+                            await auth.signInAnonymously();
+                        }
+                    } catch (error) {
+                        console.error("Firebase authentication failed:", error);
+                        showErrorModal("認証に失敗しました。アプリをリロードしてください。");
+                        // 認証失敗時はDBとAuthを無効化して永続化を停止
+                        db = null;
+                        auth = null;
+                        userId = null;
+                        updateSavedBetsDisplay(); // 表示を更新
                     }
-                } catch (error) {
-                    console.error("Firebase authentication failed:", error);
-                    showErrorModal("認証に失敗しました。アプリをリロードしてください。");
                 }
-            }
-        });
+            });
+        } catch (initError) {
+            console.error("Firebase initialization failed:", initError);
+            showErrorModal("Firebaseの初期化に失敗しました。アプリをリロードしてください。");
+            console.warn("Running without persistence due to Firebase initialization error.");
+            db = null; // 初期化失敗時はDBとAuthを無効化
+            auth = null;
+            userId = null;
+            updateSavedBetsDisplay(); // Firebaseなしで表示を更新
+        }
     } else {
-        console.warn("Firebase config not found. Running without persistence.");
-        // Firebaseがない場合の初期表示
-        // generateCarInputs(); // ユーザーが「出走数」を選択するまで待つため、ここでの呼び出しは削除
+        console.warn("Firebase persistence is disabled because a real Firebase configuration was not provided or Firebase SDK is not loaded.");
+        // Firebaseが利用できない場合の初期表示
+        db = null; // 明示的にnullに設定
+        auth = null;
+        userId = null;
         updateSavedBetsDisplay();
     }
 });
@@ -71,15 +105,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Firestoreから保存された買い目をロードする関数
 function loadSavedBetsFromFirestore() {
     if (!db || !userId) {
-        console.warn("Firestore or User ID not available for loading bets.");
+        console.warn("Firestore or User ID not available for loading bets. Persistence is disabled.");
         return;
     }
 
     // ユーザー固有のコレクションパス
-    const userBetsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/savedBets`);
+    const userBetsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/savedBets`);
     
     // リアルタイムリスナーを設定
-    onSnapshot(userBetsCollectionRef, (snapshot) => {
+    userBetsCollectionRef.onSnapshot((snapshot) => {
         const bets = [];
         snapshot.forEach(doc => {
             bets.push({ id: doc.id, ...doc.data() }); // ドキュメントIDも保存
@@ -118,7 +152,7 @@ function generateCarInputs() {
     if (!count) { // 出走数が選択されていない場合
         document.getElementById('calcButton').disabled = true;
         document.getElementById('saveButton').disabled = true;
-        // ★修正点: 出走数が選択されていない場合、1着候補と2着候補を無効化
+        // 出走数が選択されていない場合、1着候補と2着候補を無効化
         firstSelect.disabled = true;
         secondSelect.disabled = true;
         console.log('generateCarInputs: count is empty. firstSelect.disabled =', firstSelect.disabled, 'secondSelect.disabled =', secondSelect.disabled);
@@ -132,7 +166,7 @@ function generateCarInputs() {
         option1.text = `${i}番`;
         firstSelect.appendChild(option1);
     }
-    // ★修正点: 出走数が選択されたら1着候補を有効化
+    // 出走数が選択されたら1着候補を有効化
     firstSelect.disabled = false;
     console.log('generateCarInputs: count selected. firstSelect.disabled =', firstSelect.disabled);
     updateProbabilityInputs(); // 確率入力フィールドを更新
@@ -159,11 +193,11 @@ function updateProbabilityInputs() {
                 secondSelect.appendChild(option2);
             }
         }
-        // ★修正点: 1着候補が選択されたら2着候補を有効化
+        // 1着候補が選択されたら2着候補を有効化
         secondSelect.disabled = false;
         console.log('updateProbabilityInputs: firstSelected. secondSelect.disabled =', secondSelect.disabled);
     } else {
-        // ★修正点: 1着候補が選択されていない場合は2着候補を無効化
+        // 1着候補が選択されていない場合は2着候補を無効化
         secondSelect.disabled = true;
         console.log('updateProbabilityInputs: no firstSelected. secondSelect.disabled =', secondSelect.disabled);
     }
@@ -434,6 +468,11 @@ async function saveSelectedBets() {
         return;
     }
 
+    if (!db || !userId) {
+        showErrorModal("Firebaseが利用できません。買い目は保存されません。");
+        return; // Firebaseが利用できない場合はここで処理を中断
+    }
+
     const newBets = [];
     checkboxes.forEach(checkbox => {
         const bet = {
@@ -445,20 +484,16 @@ async function saveSelectedBets() {
         newBets.push(bet);
     });
 
-    if (db && userId) {
-        try {
-            await addDoc(collection(db, `artifacts/${appId}/users/${userId}/savedBets`), {
-                name: betName,
-                bets: newBets,
-                timestamp: new Date()
-            });
-            console.log("Bets saved to Firestore.");
-        } catch (e) {
-            console.error("Error adding document: ", e);
-            showErrorModal("買い目の保存中にエラーが発生しました。");
-        }
-    } else {
-        showErrorModal("Firebaseが利用できません。買い目は保存されません。");
+    try {
+        await db.collection(`artifacts/${appId}/users/${userId}/savedBets`).add({
+            name: betName,
+            bets: newBets,
+            timestamp: new Date()
+        });
+        console.log("Bets saved to Firestore.");
+    } catch (e) {
+        console.error("Error adding document: ", e);
+        showErrorModal("買い目の保存中にエラーが発生しました。");
     }
 
     document.getElementById('results').innerHTML = '';
@@ -528,14 +563,14 @@ async function deleteSelectedBets() {
 
     if (!db || !userId) {
         showErrorModal("データベースが利用できません。");
-        return;
+        return; // Firebaseが利用できない場合はここで処理を中断
     }
 
     const docIdsToDelete = Array.from(checkboxes).map(cb => cb.dataset.docId);
 
     try {
         for (const docId of docIdsToDelete) {
-            await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/savedBets`, docId));
+            await db.collection(`artifacts/${appId}/users/${userId}/savedBets`).doc(docId).delete();
         }
         console.log("Selected bets deleted from Firestore.");
     } catch (e) {

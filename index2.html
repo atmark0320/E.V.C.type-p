@@ -62,7 +62,6 @@
             document.getElementById('trackDataOverlay').style.display = 'none';
         }
     </script>
-    <!-- Firebase SDKの読み込みは全て削除しました -->
 </head>
 <body>
     <div class="links">
@@ -127,8 +126,8 @@
             <h2>保存された買い目</h2>
         </div>
         <div id="savedBets" class="saved-bets"></div>
-        <!-- 選択を削除ボタンをここに移動し、初期非表示 -->
-        <button onclick="deleteSelectedBets()" id="deleteSavedBetsButton" style="width: auto; margin-top: 10px; padding: 5px 10px; background-color: #d32f2f; font-size: 0.9em; display: none;">選択を削除</button>
+        <!-- 個別買い目削除用のボタンを追加 -->
+        <button onclick="deleteSelectedIndividualBets()" id="deleteIndividualBetsButton" style="width: auto; margin-top: 10px; padding: 5px 10px; background-color: #d32f2f; font-size: 0.9em; display: none;">選択した買い目を削除</button>
     </div>
 
     <!-- エラーモーダル -->
@@ -151,7 +150,7 @@
         <ol>
             <li><strong>出走数の選択</strong><br>「出走数」ドロップダウンから「５」「６」「７」「８」「９」のいずれかを選択します。選択後、1着候補と2着候補の選択肢が更新されます。</li>
             <li><strong>1着候補の選択</strong><br>「1着候補」ドロップダウンから予想する1着の枠番（例: 1番）を選択します。選択すると、確率入力欄が表示されます。</li>
-            <li><strong>2着候補の選択（任意）</strong><<br>「2着候補」ドロップダウンから予想する2着の枠番（例: 2番）を選択します。1着と同じ枠番は選択できません。未選択のままでも計算可能です（この場合、二連単のみ計算）。</li>
+            <li><strong>2着候補の選択（任意）</strong><br>「2着候補」ドロップダウンから予想する2着の枠番（例: 2番）を選択します。1着と同じ枠番は選択できません。未選択のままでも計算可能です（この場合、二連単のみ計算）。</li>
             <li><strong>目標回収率の入力</strong><br>「目標回収率(%)」に整数値を入力します（デフォルト: 100）。範囲は1～1000で、小数点以下の入力はできません（例: 100, 95, 105）。</li>
         </ol>
 

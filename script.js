@@ -1,65 +1,8 @@
-// Firebase SDKのインポートはHTMLで行うため、ここでは削除します。
-// import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-// import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// import { getFirestore, collection, query, onSnapshot, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Firebase関連のコードは全て削除しました。
+// 買い目データはブラウザを閉じると失われます。
 
-let savedBets = [];
+let savedBets = []; // 保存された買い目を保持する配列 (今回は永続化されません)
 let probabilities = { win: {}, place: {}, show: {} };
-
-// Firebase関連のグローバル変数 (HTMLで読み込まれるため、ここでは宣言のみ)
-let app;
-let db;
-let auth;
-let userId = null; // 現在のユーザーID
-
-// ★重要: Firebaseプロジェクトの実際の構成情報をここに貼り付けてください。
-// Firebaseコンソール（プロジェクト設定 -> 全般 -> マイアプリ）から取得できます。
-// 例:
-// const FIREBASE_API_KEY = "YOUR_API_KEY";
-// const FIREBASE_AUTH_DOMAIN = "YOUR_PROJECT_ID.firebaseapp.com";
-// const FIREBASE_PROJECT_ID = "YOUR_PROJECT_ID";
-// const FIREBASE_STORAGE_BUCKET = "YOUR_PROJECT_ID.appspot.com";
-// const FIREBASE_MESSAGING_SENDER_ID = "YOUR_MESSAGING_SENDER_ID";
-// const FIREBASE_APP_ID = "YOUR_APP_ID";
-// const FIREBASE_MEASUREMENT_ID = "YOUR_MEASUREMENT_ID"; // 必要であれば
-
-// Canvas環境から提供されるFirebase設定とアプリID
-// Canvas環境で実行されていない場合、これらの変数はundefinedになります。
-const canvasAppId = typeof __app_id !== 'undefined' ? __app_id : null;
-const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-
-let firebaseConfig = {};
-let currentAppId = 'default-app-id'; // デフォルト値
-
-// ★修正点: Canvas外でのデプロイ時に実際のFirebase設定を使用するロジック
-// Canvas環境で実行されている場合、Canvas提供の設定を使用
-if (canvasFirebaseConfig && canvasFirebaseConfig.projectId && canvasFirebaseConfig.projectId !== "dummy-project") {
-    firebaseConfig = canvasFirebaseConfig;
-    currentAppId = canvasAppId;
-    console.log("Using Canvas-provided Firebase configuration.");
-} else {
-    // Canvas環境外で実行されている場合、またはダミー設定の場合
-    // ここに実際のFirebaseプロジェクトの構成情報を手動で貼り付けてください。
-    // 例:
-    firebaseConfig = {
-        apiKey: "YOUR_API_KEY", // <-- ここに実際のAPIキーを貼り付け
-        authDomain: "YOUR_PROJECT_ID.firebaseapp.com", // <-- ここに実際のAuth Domainを貼り付け
-        projectId: "YOUR_PROJECT_ID", // <-- ここに実際のProject IDを貼り付け
-        storageBucket: "YOUR_PROJECT_ID.appspot.com", // <-- ここに実際のStorage Bucketを貼り付け
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // <-- ここに実際のMessaging Sender IDを貼り付け
-        appId: "YOUR_APP_ID" // <-- ここに実際のApp IDを貼り付け
-        // measurementId: "YOUR_MEASUREMENT_ID" // 必要であれば
-    };
-    currentAppId = firebaseConfig.projectId || 'default-app-id'; // Project IDをappIdとして使用
-    console.warn("No Canvas-provided real Firebase configuration. Please ensure you have pasted your actual Firebase project config in script.js for persistence to work online.");
-}
-
-// Firebaseが有効かどうかを判断するフラグ
-let isFirebaseEnabled = false;
-if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY" && typeof firebase !== 'undefined' && typeof firebase.initializeApp === 'function') {
-    isFirebaseEnabled = true;
-}
-
 
 // DOMContentLoaded イベントリスナー: HTMLが完全に読み込まれてから実行
 document.addEventListener('DOMContentLoaded', async () => {
@@ -79,90 +22,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     firstSelect.addEventListener('change', updateProbabilityInputs);
     secondSelect.addEventListener('change', updateProbabilityInputs);
 
-    // ★修正点: Firebaseが有効な場合のみ初期化と認証を試みる
-    if (isFirebaseEnabled) {
-        try {
-            app = firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            auth = firebase.auth();
+    // Firebaseがないため、保存された買い目は常に空として表示
+    updateSavedBetsDisplay();
 
-            // 認証状態の変更を監視
-            auth.onAuthStateChanged(async (user) => {
-                if (user) {
-                    userId = user.uid;
-                    console.log("Firebase authenticated. User ID:", userId);
-                    loadSavedBetsFromFirestore(); // 認証後に買い目をロード
-                } else {
-                    console.log("Firebase not authenticated. Signing in anonymously...");
-                    try {
-                        // __initial_auth_token が定義されていない場合は匿名認証を使用
-                        if (typeof __initial_auth_token !== 'undefined') {
-                            await auth.signInWithCustomToken(__initial_auth_token);
-                        } else {
-                            await auth.signInAnonymously();
-                        }
-                    } catch (error) {
-                        console.error("Firebase authentication failed:", error);
-                        showErrorModal("認証に失敗しました。アプリをリロードしてください。");
-                        // 認証失敗時はDBとAuthを無効化して永続化を停止
-                        db = null;
-                        auth = null;
-                        userId = null;
-                        updateSavedBetsDisplay(); // 表示を更新
-                    }
-                }
-            });
-        } catch (initError) {
-            console.error("Firebase initialization failed:", initError);
-            showErrorModal("Firebaseの初期化に失敗しました。アプリをリロードしてください。");
-            console.warn("Running without persistence due to Firebase initialization error.");
-            db = null; // 初期化失敗時はDBとAuthを無効化
-            auth = null;
-            userId = null;
-            updateSavedBetsDisplay(); // Firebaseなしで表示を更新
-        }
-    } else {
-        console.warn("Firebase persistence is disabled because a real Firebase configuration was not provided or Firebase SDK is not loaded.");
-        // Firebaseが利用できない場合の初期表示
-        db = null; // 明示的にnullに設定
-        auth = null;
-        userId = null;
-        updateSavedBetsDisplay();
-    }
+    // 出走数と目標回収率の入力は常に有効
+    document.getElementById('carCount').disabled = false;
+    document.getElementById('targetRecovery').disabled = false;
 });
 
-// Firestoreから保存された買い目をロードする関数
+// 保存された買い目をロードする関数 (Firebaseがないため、常に空)
 function loadSavedBetsFromFirestore() {
-    if (!db || !userId) {
-        console.warn("Firestore or User ID not available for loading bets. Persistence is disabled.");
-        return;
-    }
-
-    // ユーザー固有のコレクションパス
-    const userBetsCollectionRef = db.collection(`artifacts/${currentAppId}/users/${userId}/savedBets`);
-    
-    // リアルタイムリスナーを設定
-    userBetsCollectionRef.onSnapshot((snapshot) => {
-        const bets = [];
-        snapshot.forEach(doc => {
-            bets.push({ id: doc.id, ...doc.data() }); // ドキュメントIDも保存
-        });
-        savedBets = bets; // グローバル変数savedBetsを更新
-        updateSavedBetsDisplay(); // 表示を更新
-        console.log("Saved bets loaded from Firestore:", savedBets);
-
-        // 買い目がない場合、出走数と目標回収率の入力を再度有効にする
-        if (savedBets.length === 0) {
-            document.getElementById('carCount').disabled = false;
-            document.getElementById('targetRecovery').disabled = false;
-        } else {
-            document.getElementById('carCount').disabled = true;
-            document.getElementById('targetRecovery').disabled = true;
-        }
-    }, (error) => {
-        console.error("Error fetching saved bets from Firestore:", error);
-        showErrorModal("保存された買い目の読み込み中にエラーが発生しました。");
-    });
+    console.warn("Firebaseが利用できないため、買い目の読み込みは行われません。");
+    savedBets = []; // 常に空の配列
+    updateSavedBetsDisplay(); // 表示を更新
 }
 
 
@@ -483,7 +355,7 @@ function calculateOdds() {
     document.getElementById('saveButton').disabled = false; // 保存ボタンを有効化
 }
 
-// 選択された買い目を保存する関数
+// 選択された買い目を保存する関数 (Firebaseがないため、保存は行われません)
 async function saveSelectedBets() {
     const checkboxes = document.querySelectorAll('.bet-checkbox:checked');
     if (checkboxes.length === 0) {
@@ -497,11 +369,7 @@ async function saveSelectedBets() {
         return;
     }
 
-    if (!db || !userId) {
-        showErrorModal("Firebaseが利用できません。買い目は保存されません。");
-        return; // Firebaseが利用できない場合はここで処理を中断
-    }
-
+    // 買い目を一時的に保存 (ページ更新で消えます)
     const newBets = [];
     checkboxes.forEach(checkbox => {
         const bet = {
@@ -513,23 +381,21 @@ async function saveSelectedBets() {
         newBets.push(bet);
     });
 
-    try {
-        await db.collection(`artifacts/${currentAppId}/users/${userId}/savedBets`).add({
-            name: betName,
-            bets: newBets,
-            timestamp: new Date()
-        });
-        console.log("Bets saved to Firestore.");
-    } catch (e) {
-        console.error("Error adding document: ", e);
-        showErrorModal("買い目の保存中にエラーが発生しました。");
-    }
+    savedBets.push({
+        id: Date.now().toString(), // 一時的なID
+        name: betName,
+        bets: newBets,
+        timestamp: new Date()
+    });
+
+    updateSavedBetsDisplay(); // 表示を更新
+    showErrorModal("Firebaseが利用できないため、買い目はブラウザを閉じると消えてしまいます。");
 
     document.getElementById('results').innerHTML = '';
     document.getElementById('saveButton').disabled = true;
 
-    document.getElementById('carCount').disabled = true;
-    document.getElementById('targetRecovery').disabled = true;
+    document.getElementById('carCount').disabled = false; // 保存しても無効化しない
+    document.getElementById('targetRecovery').disabled = false; // 保存しても無効化しない
 }
 
 // 保存された買い目を表示する関数
@@ -582,7 +448,7 @@ function updateSavedBetsDisplay() {
     deleteButton.style.display = 'block';
 }
 
-// 選択された買い目を削除する関数
+// 選択された買い目を削除する関数 (Firebaseがないため、一時的なデータから削除)
 async function deleteSelectedBets() {
     const checkboxes = document.querySelectorAll('.saved-bet-checkbox:checked');
     if (checkboxes.length === 0) {
@@ -590,21 +456,26 @@ async function deleteSelectedBets() {
         return;
     }
 
-    if (!db || !userId) {
-        showErrorModal("データベースが利用できません。");
-        return; // Firebaseが利用できない場合はここで処理を中断
-    }
+    // 選択された買い目のインデックスを降順にソートして取得
+    const indicesToDelete = Array.from(checkboxes).map(cb => {
+        const docId = cb.dataset.docId;
+        return savedBets.findIndex(bet => bet.id === docId);
+    }).sort((a, b) => b - a);
 
-    const docIdsToDelete = Array.from(checkboxes).map(cb => cb.dataset.docId);
-
-    try {
-        for (const docId of docIdsToDelete) {
-            await db.collection(`artifacts/${currentAppId}/users/${userId}/savedBets`).doc(docId).delete();
+    // 選択された買い目を削除
+    indicesToDelete.forEach(index => {
+        if (index > -1) {
+            savedBets.splice(index, 1);
         }
-        console.log("Selected bets deleted from Firestore.");
-    } catch (e) {
-        console.error("Error deleting documents: ", e);
-        showErrorModal("買い目の削除中にエラーが発生しました。");
+    });
+
+    updateSavedBetsDisplay(); // 表示を更新
+    showErrorModal("Firebaseが利用できないため、買い目はブラウザを閉じると消えてしまいます。");
+
+    // 保存された買い目がなくなった場合、出走数と目標回収率の入力を再度有効にする
+    if (savedBets.length === 0) {
+        document.getElementById('carCount').disabled = false;
+        document.getElementById('targetRecovery').disabled = false;
     }
 }
 
@@ -622,7 +493,7 @@ function resetForm() {
     document.getElementById('results').innerHTML = '';
     document.getElementById('calcButton').disabled = true;
     document.getElementById('saveButton').disabled = true;
-    // savedBets = []; // Firestoreからロードするため、この行は不要
+    savedBets = []; // 保存された買い目をクリア
     probabilities = { win: {}, place: {}, show: {} };
     updateSavedBetsDisplay();
     closeModal();

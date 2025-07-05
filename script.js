@@ -422,10 +422,12 @@ async function saveSelectedBets() {
 function updateSavedBetsDisplay() {
     const savedBetsDiv = document.getElementById('savedBets');
     const deleteIndividualBetsButton = document.getElementById('deleteIndividualBetsButton');
+    const exportTextButton = document.getElementById('exportTextButton'); // 追加
 
     if (savedBets.length === 0) {
         savedBetsDiv.innerHTML = '<p>保存された買い目はまだありません。</p>';
         deleteIndividualBetsButton.style.display = 'none'; // ボタンを非表示にする
+        exportTextButton.style.display = 'none'; // ボタンを非表示にする
         return;
     }
 
@@ -487,8 +489,9 @@ function updateSavedBetsDisplay() {
     });
     savedBetsDiv.innerHTML = displayHtml;
 
-    // 買い目がある場合は個別削除ボタンを表示
+    // 買い目がある場合は個別削除ボタンとテキスト出力ボタンを表示
     deleteIndividualBetsButton.style.display = 'block';
+    exportTextButton.style.display = 'block';
 }
 
 /**
@@ -571,6 +574,7 @@ function resetForm() {
     updateSavedBetsDisplay();
     closeModal();
     document.getElementById('deleteIndividualBetsButton').style.display = 'none'; // リセット時にボタンを非表示
+    document.getElementById('exportTextButton').style.display = 'none'; // リセット時にボタンを非表示
 
     // 1着候補と2着候補のドロップダウンを無効化
     firstSelect.disabled = true;
@@ -622,4 +626,64 @@ function showManualModal() {
 function closeManualModal() {
     document.getElementById('manualOverlay').style.display = 'none';
     document.getElementById('manualModal').style.display = 'none';
+}
+
+/**
+ * 保存された買い目データをテキスト形式でクリップボードにコピーします。
+ */
+function exportBetsAsText() {
+    if (savedBets.length === 0) {
+        showMessageModal('出力する買い目がありません。', true);
+        return;
+    }
+
+    let exportText = "--- 必要オッズ計算結果 ---\n\n";
+
+    // 全体の合成オッズ情報を追加
+    let overallTotalOddsSum = 0;
+    let overallTotalBetsCount = 0;
+    savedBets.forEach(savedSet => {
+        savedSet.bets.forEach(bet => {
+            overallTotalOddsSum += 1 / bet.odds;
+            overallTotalBetsCount++;
+        });
+    });
+    const overallCombinedOdds = overallTotalOddsSum > 0 ? Math.round((1 / overallTotalOddsSum) * 100) / 100 : 1000;
+    exportText += `全体の点数: ${overallTotalBetsCount}点, 全体の合成オッズ: ${overallCombinedOdds}倍\n\n`;
+
+    // 各買い目セットの詳細を追加
+    savedBets.forEach((savedSet, setIndex) => {
+        let totalOddsSum = 0;
+        savedSet.bets.forEach(bet => {
+            totalOddsSum += 1 / bet.odds;
+        });
+        const combinedOdds = totalOddsSum > 0 ? Math.round((1 / totalOddsSum) * 100) / 100 : 1000;
+
+        exportText += `--- 買い目セット ${setIndex + 1} ---\n`;
+        exportText += `点数: ${savedSet.bets.length}, 合成オッズ: ${combinedOdds}倍\n`;
+        exportText += `種類 | 出目 | 成立確率 | 必要オッズ\n`;
+        exportText += `---------------------------------\n`;
+        savedSet.bets.forEach(bet => {
+            // ユーザーの要望に合わせてパディングを調整
+            const betType = getBetTypeName(bet.type);
+            const probFormatted = `${(bet.prob * 100).toFixed(1)} %`;
+            const oddsFormatted = `${bet.odds}倍`;
+            exportText += `${betType.padEnd(8)} | ${bet.pattern.padEnd(8)} | ${probFormatted.padEnd(10)} | ${oddsFormatted}\n`;
+        });
+        exportText += "\n";
+    });
+
+    // クリップボードにコピー
+    const textarea = document.createElement('textarea');
+    textarea.value = exportText;
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        showMessageModal('買い目データをクリップボードにコピーしました！', false);
+    } catch (err) {
+        showMessageModal('クリップボードへのコピーに失敗しました。手動でコピーしてください。', true);
+        console.error('クリップボードへのコピーに失敗:', err);
+    }
+    document.body.removeChild(textarea);
 }

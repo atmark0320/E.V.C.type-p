@@ -12,23 +12,52 @@ let db;
 let auth;
 let userId = null; // 現在のユーザーID
 
-// Canvas環境から提供されるFirebase設定とアプリID
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-let firebaseConfig = {};
+// ★重要: Firebaseプロジェクトの実際の構成情報をここに貼り付けてください。
+// Firebaseコンソール（プロジェクト設定 -> 全般 -> マイアプリ）から取得できます。
+// 例:
+// const FIREBASE_API_KEY = "YOUR_API_KEY";
+// const FIREBASE_AUTH_DOMAIN = "YOUR_PROJECT_ID.firebaseapp.com";
+// const FIREBASE_PROJECT_ID = "YOUR_PROJECT_ID";
+// const FIREBASE_STORAGE_BUCKET = "YOUR_PROJECT_ID.appspot.com";
+// const FIREBASE_MESSAGING_SENDER_ID = "YOUR_MESSAGING_SENDER_ID";
+// const FIREBASE_APP_ID = "YOUR_APP_ID";
+// const FIREBASE_MEASUREMENT_ID = "YOUR_MEASUREMENT_ID"; // 必要であれば
 
-// ★修正点: __firebase_config が提供されているか、かつそれがダミー設定でないかを厳密にチェック
-let isRealFirebaseConfig = false;
-if (typeof __firebase_config !== 'undefined') {
-    firebaseConfig = JSON.parse(__firebase_config);
-    // projectIdが「dummy-project」でないことを確認して、本物のFirebase設定とみなす
-    if (firebaseConfig.projectId && firebaseConfig.projectId !== "dummy-project") {
-        isRealFirebaseConfig = true;
-        console.log("Canvas-provided __firebase_config is detected and appears to be real.");
-    } else {
-        console.warn("Canvas-provided __firebase_config is present but appears to be a dummy or incomplete config. Firebase persistence will be disabled.");
-    }
+// Canvas環境から提供されるFirebase設定とアプリID
+// Canvas環境で実行されていない場合、これらの変数はundefinedになります。
+const canvasAppId = typeof __app_id !== 'undefined' ? __app_id : null;
+const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+let firebaseConfig = {};
+let currentAppId = 'default-app-id'; // デフォルト値
+
+// ★修正点: Canvas外でのデプロイ時に実際のFirebase設定を使用するロジック
+// Canvas環境で実行されている場合、Canvas提供の設定を使用
+if (canvasFirebaseConfig && canvasFirebaseConfig.projectId && canvasFirebaseConfig.projectId !== "dummy-project") {
+    firebaseConfig = canvasFirebaseConfig;
+    currentAppId = canvasAppId;
+    console.log("Using Canvas-provided Firebase configuration.");
 } else {
-    console.warn("Canvas-provided __firebase_config is undefined. Firebase persistence will be disabled.");
+    // Canvas環境外で実行されている場合、またはダミー設定の場合
+    // ここに実際のFirebaseプロジェクトの構成情報を手動で貼り付けてください。
+    // 例:
+    firebaseConfig = {
+        apiKey: "YOUR_API_KEY", // <-- ここに実際のAPIキーを貼り付け
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com", // <-- ここに実際のAuth Domainを貼り付け
+        projectId: "YOUR_PROJECT_ID", // <-- ここに実際のProject IDを貼り付け
+        storageBucket: "YOUR_PROJECT_ID.appspot.com", // <-- ここに実際のStorage Bucketを貼り付け
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // <-- ここに実際のMessaging Sender IDを貼り付け
+        appId: "YOUR_APP_ID" // <-- ここに実際のApp IDを貼り付け
+        // measurementId: "YOUR_MEASUREMENT_ID" // 必要であれば
+    };
+    currentAppId = firebaseConfig.projectId || 'default-app-id'; // Project IDをappIdとして使用
+    console.warn("No Canvas-provided real Firebase configuration. Please ensure you have pasted your actual Firebase project config in script.js for persistence to work online.");
+}
+
+// Firebaseが有効かどうかを判断するフラグ
+let isFirebaseEnabled = false;
+if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY" && typeof firebase !== 'undefined' && typeof firebase.initializeApp === 'function') {
+    isFirebaseEnabled = true;
 }
 
 
@@ -50,12 +79,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     firstSelect.addEventListener('change', updateProbabilityInputs);
     secondSelect.addEventListener('change', updateProbabilityInputs);
 
-    // ★修正点: 本物のFirebase設定がある場合のみFirebaseを初期化
-    if (isRealFirebaseConfig && typeof firebase !== 'undefined' && typeof firebase.initializeApp === 'function') {
+    // ★修正点: Firebaseが有効な場合のみ初期化と認証を試みる
+    if (isFirebaseEnabled) {
         try {
             app = firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore(); // getFirestoreの代わりにfirebase.firestore()を使用
-            auth = firebase.auth();   // getAuthの代わりにfirebase.auth()を使用
+            db = firebase.firestore();
+            auth = firebase.auth();
 
             // 認証状態の変更を監視
             auth.onAuthStateChanged(async (user) => {
@@ -110,7 +139,7 @@ function loadSavedBetsFromFirestore() {
     }
 
     // ユーザー固有のコレクションパス
-    const userBetsCollectionRef = db.collection(`artifacts/${appId}/users/${userId}/savedBets`);
+    const userBetsCollectionRef = db.collection(`artifacts/${currentAppId}/users/${userId}/savedBets`);
     
     // リアルタイムリスナーを設定
     userBetsCollectionRef.onSnapshot((snapshot) => {
@@ -485,7 +514,7 @@ async function saveSelectedBets() {
     });
 
     try {
-        await db.collection(`artifacts/${appId}/users/${userId}/savedBets`).add({
+        await db.collection(`artifacts/${currentAppId}/users/${userId}/savedBets`).add({
             name: betName,
             bets: newBets,
             timestamp: new Date()
@@ -570,7 +599,7 @@ async function deleteSelectedBets() {
 
     try {
         for (const docId of docIdsToDelete) {
-            await db.collection(`artifacts/${appId}/users/${userId}/savedBets`).doc(docId).delete();
+            await db.collection(`artifacts/${currentAppId}/users/${userId}/savedBets`).doc(docId).delete();
         }
         console.log("Selected bets deleted from Firestore.");
     } catch (e) {

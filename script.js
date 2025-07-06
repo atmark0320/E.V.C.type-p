@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const carCountSelect = document.getElementById('carCount');
     const firstSelect = document.getElementById('firstSelect');
     const secondSelect = document.getElementById('secondSelect');
+    const showExactaCheckbox = document.getElementById('showExactaCheckbox'); // 新しいチェックボックス
 
     // 初期状態で1着候補と2着候補のドロップダウンを無効化
     firstSelect.disabled = true;
@@ -20,6 +21,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     carCountSelect.addEventListener('change', generateCarInputs);
     firstSelect.addEventListener('change', updateProbabilityInputs);
     secondSelect.addEventListener('change', updateProbabilityInputs);
+    
+    // 二連単表示チェックボックスのイベントリスナーを削除 (calculateOdds内で状態をチェックするため)
+    // showExactaCheckbox.addEventListener('change', toggleExactaDisplay); // この行を削除
 
     // savedBetsは初期状態の空配列（localStorageからのロードは行いません）
     updateSavedBetsDisplay();
@@ -52,12 +56,13 @@ function generateCarInputs() {
     const count = parseInt(document.getElementById('carCount').value);
     const firstSelect = document.getElementById('firstSelect');
     const secondSelect = document.getElementById('secondSelect');
+    const resultsDiv = document.getElementById('results');
     
     // 既存の選択肢と結果表示をクリア
     firstSelect.innerHTML = '<option value="">選択してください</option>';
     secondSelect.innerHTML = '<option value="">選択してください</option>';
     document.getElementById('probabilityInputs').innerHTML = '';
-    document.getElementById('results').innerHTML = '';
+    resultsDiv.innerHTML = ''; // 結果表示エリアをクリア
     
     if (!count) { // 出走数が選択されていない場合
         document.getElementById('calcButton').disabled = true;
@@ -270,6 +275,7 @@ function calculateOdds() {
     let cars = [];
     let winSum = 0, placeSum = 0, showSum = 0;
     let hasEmptyInput = false;
+    const showExactaCheckbox = document.getElementById('showExactaCheckbox'); // チェックボックスの状態を取得
 
     // 各車の確率データを収集
     for (let i = 1; i <= count; i++) {
@@ -298,6 +304,8 @@ function calculateOdds() {
     }
 
     const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = ''; // 結果表示エリアをクリア
+
     // 未入力項目がある場合、エラーモーダルを表示
     if (hasEmptyInput) {
         showMessageModal('未入力の項目があります。すべての有効な欄に入力してください。', true);
@@ -320,6 +328,7 @@ function calculateOdds() {
 
     let results = { exacta: [], trifecta: [] };
 
+    // 二連単の計算
     if (firstSelected) {
         cars.forEach(s => {
             if (s.id !== firstSelected) {
@@ -344,38 +353,91 @@ function calculateOdds() {
         });
     }
 
-    // 結果を表示
-    resultsDiv.innerHTML = `
-        <h2>計算結果 (目標回収率: ${targetRecovery}%)</h2>
-        <div class="results-container">
-            ${Object.entries(results).map(([type, patterns]) => `
-                <div class="result-section">
-                    <h3>${getBetTypeName(type)}</h3>
-                    ${patterns.length > 0 ? `
-                        <div style="overflow-x: auto;">
-                            <table>
-                                <tr><th>選択</th><th>出目</th><th>成立確率</th><th>必要オッズ</th></tr>
-                                ${patterns.map(p => `
-                                    <tr>
-                                        <td><input type="checkbox" class="bet-checkbox" data-type="${type}" data-pattern="${p.pattern}" data-prob="${p.prob}" data-odds="${p.odds}"></td>
-                                        <td>${p.pattern}</td>
-                                        <td>${(p.prob * 100).toFixed(1)}%</td>
-                                        <td>${p.odds}倍</td>
-                                    </tr>
-                                `).join('')}
-                            </table>
-                        </div>
-                    ` : '<p>該当なし</p>'}
+    // 結果表示のHTMLを生成
+    let resultsHtml = `<h2>計算結果 (目標回収率: ${targetRecovery}%)</h2><div class="results-container">`;
+
+    // 二連単セクション（チェックボックスの状態に基づいて表示/非表示）
+    if (showExactaCheckbox.checked) { // チェックボックスがチェックされている場合のみ表示
+        resultsHtml += `
+            <div class="result-section" id="exactaResultsSection">
+                <h3>${getBetTypeName('exacta')}</h3>
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" onchange="toggleSelectAllBets('exacta', this.checked)"> 全て選択
+                </label>
+                ${results.exacta.length > 0 ? `
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <tr><th>選択</th><th>出目</th><th>成立確率</th><th>必要オッズ</th></tr>
+                            ${results.exacta.map(p => `
+                                <tr>
+                                    <td><input type="checkbox" class="bet-checkbox exacta-bet-checkbox" data-type="exacta" data-pattern="${p.pattern}" data-prob="${p.prob}" data-odds="${p.odds}"></td>
+                                    <td>${p.pattern}</td>
+                                    <td>${(p.prob * 100).toFixed(1)}%</td>
+                                    <td>${p.odds}倍</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>
+                ` : '<p>該当なし</p>'}
+            </div>
+        `;
+    }
+
+    // 三連単セクション（常に表示）
+    resultsHtml += `
+        <div class="result-section" id="trifectaResultsSection">
+            <h3>${getBetTypeName('trifecta')}</h3>
+            <label style="display: block; margin-bottom: 5px;">
+                <input type="checkbox" onchange="toggleSelectAllBets('trifecta', this.checked)"> 全て選択
+            </label>
+            ${results.trifecta.length > 0 ? `
+                <div style="overflow-x: auto;">
+                    <table>
+                        <tr><th>選択</th><th>出目</th><th>成立確率</th><th>必要オッズ</th></tr>
+                        ${results.trifecta.map(p => `
+                            <tr>
+                                <td><input type="checkbox" class="bet-checkbox trifecta-bet-checkbox" data-type="trifecta" data-pattern="${p.pattern}" data-prob="${p.prob}" data-odds="${p.odds}"></td>
+                                <td>${p.pattern}</td>
+                                <td>${(p.prob * 100).toFixed(1)}%</td>
+                                <td>${p.odds}倍</td>
+                            </tr>
+                        `).join('')}
+                    </table>
                 </div>
-            `).join('')}
+            ` : '<p>該当なし</p>'}
         </div>
     `;
+    resultsHtml += `</div>`; // .results-containerを閉じる
+
+    resultsDiv.innerHTML = resultsHtml; // 結果をセット
+
     document.getElementById('saveButton').disabled = false; // 保存ボタンを有効化
 }
 
 /**
+ * 「二連単を表示」チェックボックスの状態に基づいて二連単の結果表示を切り替えます。
+ * この関数は直接呼ばれなくなりますが、互換性のため残しています。
+ * 実際の表示制御はcalculateOdds内で行われます。
+ */
+function toggleExactaDisplay() {
+    // この関数は直接は呼び出されません。
+    // calculateOdds() が実行される際に、showExactaCheckbox.checked の状態が参照されます。
+}
+
+/**
+ * 特定の種類の買い目チェックボックスをすべて選択/解除します。
+ * @param {string} type - 'exacta' または 'trifecta'
+ * @param {boolean} checked - チェック状態
+ */
+function toggleSelectAllBets(type, checked) {
+    document.querySelectorAll(`.${type}-bet-checkbox`).forEach(checkbox => {
+        checkbox.checked = checked;
+    });
+}
+
+/**
  * 選択された買い目を一時的に保存します。
- * このデータはページを更新したりブラウザを閉じたりすると失われます。
+ * このデータはブラウザを閉じたりページを更新したりすると失われます。
  */
 async function saveSelectedBets() {
     const checkboxes = document.querySelectorAll('.bet-checkbox:checked');
@@ -408,7 +470,7 @@ async function saveSelectedBets() {
     updateSavedBetsDisplay(); // 表示を更新
     // showMessageModal("買い目が保存されました。（このデータはページを閉じると消えます）", false); // ポップアップを削除
 
-    document.getElementById('results').innerHTML = '';
+    document.getElementById('results').innerHTML = ''; // 結果表示エリアをクリア
     document.getElementById('saveButton').disabled = true;
 
     // 買い目を保存したら出走数と目標回収率を無効化
@@ -444,8 +506,8 @@ function updateSavedBetsDisplay() {
     });
     const overallCombinedOdds = overallTotalOddsSum > 0 ? Math.round((1 / overallTotalOddsSum) * 100) / 100 : 1000;
 
-    // 全体の合成オッズを表示
-    if (savedBets.length > 0) { // 少なくとも1つのセットがあれば表示
+    // 全体の合成オッズを表示 (グローバルな「全て選択」チェックボックスは削除)
+    if (savedBets.length > 0) {
         displayHtml += `
             <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; background-color: #e0f7fa; border-radius: 5px;">
                 <strong>全体の点数: ${overallTotalBetsCount}点, 全体の合成オッズ: ${overallCombinedOdds}倍</strong>
@@ -460,12 +522,14 @@ function updateSavedBetsDisplay() {
         });
         const combinedOdds = totalOddsSum > 0 ? Math.round((1 / totalOddsSum) * 100) / 100 : 1000;
 
-        // 買い目セットのヘッダーには削除ボタンをつけない
         displayHtml += `
-            <div class="saved-bet-set" style="border: 1px solid #eee; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+            <div class="saved-bet-set" data-set-id="${savedSet.id}" style="border: 1px solid #eee; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
                 <h3>
                     点数: ${savedSet.bets.length}, 合成オッズ: ${combinedOdds}倍
                 </h3>
+                <label style="display: block; margin-bottom: 5px;">
+                    <input type="checkbox" onchange="toggleSelectAllBetsInSet('${savedSet.id}', this.checked)"> 全て選択
+                </label>
                 <div style="overflow-x: auto;">
                     <table>
                         <thead>
@@ -492,6 +556,17 @@ function updateSavedBetsDisplay() {
     // 買い目がある場合は個別削除ボタンとテキスト出力ボタンを表示
     deleteIndividualBetsButton.style.display = 'block';
     exportTextButton.style.display = 'block';
+}
+
+/**
+ * 特定の保存された買い目セット内のチェックボックスをすべて選択/解除します。
+ * @param {string} setId - 対象の買い目セットのID
+ * @param {boolean} checked - チェック状態
+ */
+function toggleSelectAllBetsInSet(setId, checked) {
+    document.querySelectorAll(`.saved-bet-set[data-set-id="${setId}"] .individual-bet-checkbox`).forEach(checkbox => {
+        checkbox.checked = checked;
+    });
 }
 
 /**
@@ -566,7 +641,10 @@ function resetForm() {
     document.getElementById('targetRecovery').value = '100';
     document.getElementById('targetRecovery').disabled = false;
     document.getElementById('probabilityInputs').innerHTML = '';
-    document.getElementById('results').innerHTML = '';
+    
+    document.getElementById('results').innerHTML = ''; // 結果表示エリアをクリア
+    document.getElementById('showExactaCheckbox').checked = false; // チェックボックスを未チェックにする
+
     document.getElementById('calcButton').disabled = true;
     document.getElementById('saveButton').disabled = true;
     savedBets = []; // 保存された買い目をクリア
